@@ -21,6 +21,7 @@
   "homepage": "https://github.com/ghostLWJ/Crawler-Facebook-Profile#readme",
   "dependencies": {
     "co": "^4.6.0",
+    "lodash": "^4.17.5",
     "puppeteer": "^1.2.0"
   }
 }

@@ -1,10 +1,19 @@
 const puppeteer = require ('puppeteer');
 const { wrap: async } = require ('co');
+const _ = require ('lodash');
 
 const config = require ('./config.js');
 
 let page = null;
 let browser = null;
+
+const createService = async (function* () {
+  const headless = false;
+  const slowMo = 0;
+  browser = yield puppeteer.launch ({ headless, slowMo });
+  page = yield browser.newPage ();
+  yield login();
+});
 
 const fbUrl = {
   index: 'https://www.facebook.com/',
@@ -13,7 +22,7 @@ const fbUrl = {
 };
 
 
-const getItemFn = function () {
+const getProfiles = function () {
   const extractedElements = document.querySelectorAll('div._5bl2');
   const items = [];
   for (let element of extractedElements) {
@@ -29,7 +38,7 @@ const infiniteScrollBottom = async (function* (page, getItemFn, targetCount = 50
   let previousHeight;
   let lastItemCount = 0
   while (items.length < targetCount) {
-    yield page.waitFor(2000); // for headless false debug
+    yield page.waitFor(2000); // for headless false debug, permission popup cancel manually.
     items = yield page.evaluate(getItemFn);
     if (lastItemCount === items.length) { break; }
     lastItemCount = items.length;
@@ -41,18 +50,6 @@ const infiniteScrollBottom = async (function* (page, getItemFn, targetCount = 50
 });
 
 const login = async (function* () {
-  if (page) { return page; }
-
-  const headless = false;
-  const slowMo = 100;
-
-  browser = yield puppeteer.launch({
-    headless,
-    slowMo
-  });
-
-  page = yield browser.newPage();
-
   yield page.goto(fbUrl.index);
 
   const inputEmail = yield page.$('#email');
@@ -63,23 +60,46 @@ const login = async (function* () {
   yield inputPass.type (config.fb.password);
   yield inputButton.click();
   yield page.waitForNavigation();
+});
 
-  return page;
-})
+/**
+ * Profile
+ * { id: String, name: String }
+ */
 
-const searchPeople = async (function* (name) {
-  if (!name) { return {}; }
-  const page = yield login();
+/**
+ * @param Array | Number id
+ * @return Array [profile]
+ */
+const getPeopleProfile = async (function* (id) {
+  let profiles = [];
+
+  return profiles;
+  if (_.isArray (id)) {
+  } else {
+  }
+  yield page.goto(`${fbUrl.searchPeople}${name}`);
+  return 'test';
+});
+
+
+/**
+ * @param Page page
+ * @param Array | Number id
+ * @return Array [profile]
+ */
+const searchPeople = async (function* (name, peopleCount = 50) {
+  let profiles = [];
 
   yield page.goto(`${fbUrl.searchPeople}${name}`);
 
-  const ids = yield infiniteScrollBottom(page, getItemFn);
+  const ids = yield infiniteScrollBottom(page, getProfiles, peopleCount);
 
   for (let id of ids) { yield page.goto(`${fbUrl.peopleProfile}${id}`); }
+  return profiles;
 });
 
-searchPeople('jack');
-
 module.exports = {
-  searchPeople,
+  createService,
+  searchPeople
 };

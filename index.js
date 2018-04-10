@@ -21,17 +21,37 @@ const fbUrl = {
   peopleProfile: 'https://www.facebook.com/profile.php?id='
 };
 
-
+/**
+ * @return [id: String]
+ */
 const getProfiles = function () {
-  const extractedElements = document.querySelectorAll('div._5bl2');
+  const profileElements = document.querySelectorAll('div._5bl2');
   const items = [];
-  for (let element of extractedElements) {
-    let dataBt = element.querySelectorAll('div[data-bt]')[0].getAttribute('data-bt');
+  for (let profileEl of profileElements) {
+    let dataBt = profileEl.querySelectorAll('div[data-bt]')[0].getAttribute('data-bt');
     dataBt = JSON.parse (dataBt);
     items.push (dataBt.id);
   }
   return items;
+};
+
+/**
+ * @return { name: String }
+ */
+const parseProfile = function () {
+  const alternateNameTagName = '<span';
+  let profile = {};
+  let name = document.querySelector('#fb-timeline-cover-name > a').innerHTML;
+
+  if (name.includes (alternateNameTagName)) {
+    name = name.substring(0, name.indexOf(alternateNameTagName) - 1);
+  }
+  console.log (name);
+
+  profile.name = name;
+  return profile;
 }
+
 
 const infiniteScrollBottom = async (function* (page, getItemFn, targetCount = 50, scrollDelay = 3000) {
   let items = [];
@@ -73,15 +93,19 @@ const login = async (function* () {
  */
 const getPeopleProfile = async (function* (id) {
   let profiles = [];
+  let _ids = [];
+
+  if (_.isArray (id)) { _ids = [...id]; }
+  else { _ids.push (id); }
+
+  for (let i of _ids) {
+    yield page.goto(`${fbUrl.peopleProfile}${String(i)}`);
+    yield page.waitForNavigation();
+    profiles.push (yield page.evaluate(parseProfile));
+  }
 
   return profiles;
-  if (_.isArray (id)) {
-  } else {
-  }
-  yield page.goto(`${fbUrl.searchPeople}${name}`);
-  return 'test';
 });
-
 
 /**
  * @param Page page
@@ -94,8 +118,8 @@ const searchPeople = async (function* (name, peopleCount = 50) {
   yield page.goto(`${fbUrl.searchPeople}${name}`);
 
   const ids = yield infiniteScrollBottom(page, getProfiles, peopleCount);
+  yield getPeopleProfile (ids);
 
-  for (let id of ids) { yield page.goto(`${fbUrl.peopleProfile}${id}`); }
   return profiles;
 });
 

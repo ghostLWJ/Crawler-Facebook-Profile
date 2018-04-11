@@ -127,7 +127,7 @@ const searchPeople = async (function* (name, peopleCount = 50) {
   yield page.goto(`${fbUrl.searchPeople}${name}`);
 
   const ids = yield infiniteScrollBottom(page, getProfiles, peopleCount);
-  yield getPeopleProfile (ids);
+  profiles = yield getPeopleProfile (ids);
 
   return profiles;
 });

@@ -22,7 +22,7 @@ const fbUrl = {
 };
 
 /**
- * @return [id: String]
+ * @return Array [id: String]
  */
 const getProfiles = function () {
   const profileElements = document.querySelectorAll('div._5bl2');
@@ -51,7 +51,13 @@ const parseProfile = function () {
   return profile;
 }
 
-
+/**
+ * @param Page page
+ * @param Function getItemFn
+ * @param Number targetCount
+ * @param Number scrollDelay
+ * @return Array [id: String]
+ */
 const infiniteScrollBottom = async (function* (page, getItemFn, targetCount = 50, scrollDelay = 3000) {
   let items = [];
   let previousHeight;

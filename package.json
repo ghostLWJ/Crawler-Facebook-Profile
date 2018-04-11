@@ -22,6 +22,8 @@
   "dependencies": {
     "co": "^4.6.0",
     "lodash": "^4.17.5",
-    "puppeteer": "^1.2.0"
+    "mysql2": "^1.5.3",
+    "puppeteer": "^1.2.0",
+    "sequelize": "^4.37.6"
   }
 }

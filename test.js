@@ -11,5 +11,6 @@ fbApis.createService ().then ( async (function* () {
     first: '100000259848518',
     second: '100000259848518'
   }
+
   const profiles = yield fbApis.searchMutualFriends (target);
 }));

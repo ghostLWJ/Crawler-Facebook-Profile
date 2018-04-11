@@ -7,9 +7,10 @@ const config = require ('./config');
 let page = null;
 let browser = null;
 
+let headless = true;
+let slowMo = 0;
+
 const createService = async (function* () {
-  const headless = false;
-  const slowMo = 0;
   browser = yield puppeteer.launch ({ headless, slowMo });
   page = yield browser.newPage ();
   yield login();
@@ -34,7 +35,7 @@ const getProfiles = function () {
     dataBt = JSON.parse (dataBt);
     items.push (dataBt.id);
   }
-  return items;
+  return Promise.resolve(items);
 };
 
 /**
@@ -83,16 +84,26 @@ const infiniteScrollBottom = async (function* (page, getItemFn, targetCount = 50
   let items = [];
   let previousHeight;
   let lastItemCount = 0
-  while (items.length < targetCount) {
-    yield page.waitFor(2000); // for headless false debug, permission popup cancel manually.
-    items = yield page.evaluate(getItemFn);
-    if (lastItemCount === items.length) { break; }
-    lastItemCount = items.length;
-    // previousHeight = yield page.evaluate('document.body.scrollHeight');
-    previousHeight = yield page.evaluate('window.scrollY');
-    yield page.evaluate ('window.scrollTo(0, document.body.scrollHeight)');
-    yield page.waitForFunction (`window.scrollY > ${previousHeight}`);
-    yield page.waitFor(scrollDelay);
+  let tryCount = 5;
+  const waitForCancelPermission = 5000;
+  try {
+    while (items.length < targetCount) {
+      if (!headless) { yield page.waitFor (waitForCancelPermission); headless = true; } // for headless false debug, permission popup cancel manually.
+      items = yield page.evaluate(getItemFn);
+      if (lastItemCount === items.length) {
+        if (!tryCount--) {
+          break;
+        }
+        console.log (`Try count is = ${tryCount}`);
+      }
+      lastItemCount = items.length;
+      previousHeight = yield page.evaluate('window.scrollY');
+      yield page.evaluate ('window.scrollTo(0, document.body.scrollHeight)');
+      yield page.waitForFunction (`window.scrollY > ${previousHeight}`);
+      yield page.waitFor(scrollDelay);
+    }
+  } catch (e) {
+    console.log (`OOops Error happened ${e}`);
   }
   return items;
 });
@@ -165,7 +176,11 @@ const searchMutualFriends = async (function* (target) {
 
   yield page.goto(`${fbUrl.skFriends}${first}${skFriendSuffix}`);
 
-  profiles = yield infiniteScrollBottom(page, getFriends, Infinity, 500);
+  try {
+    profiles = yield infiniteScrollBottom(page, getFriends, Infinity, 500).catch( e => console.log(`rejected error ${e}`));
+  } catch (e) {
+    console.log (`Oops Error happened ${e}`);
+  }
 
   return profiles;
 })

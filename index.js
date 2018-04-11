@@ -2,7 +2,7 @@ const puppeteer = require ('puppeteer');
 const { wrap: async } = require ('co');
 const _ = require ('lodash');
 
-const config = require ('./config.js');
+const config = require ('./config');
 
 let page = null;
 let browser = null;

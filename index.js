@@ -108,7 +108,7 @@ const getPeopleProfile = async (function* (id) {
     let profile = yield page.evaluate(parseProfile);
 
     profiles.push ({
-      id: i,
+      id: String(i),
       name: profile.name
     });
   }

@@ -18,8 +18,10 @@ const createService = async (function* () {
 const fbUrl = {
   index: 'https://www.facebook.com/',
   searchPeople: 'https://www.facebook.com/search/people/?q=',
-  peopleProfile: 'https://www.facebook.com/profile.php?id='
+  peopleProfile: 'https://www.facebook.com/profile.php?id=',
+  skFriends: 'https://www.facebook.com/profile.php?id=',
 };
+const skFriendSuffix = '&sk=friends';
 
 /**
  * @return Array [id: String]
@@ -31,6 +33,25 @@ const getProfiles = function () {
     let dataBt = profileEl.querySelectorAll('div[data-bt]')[0].getAttribute('data-bt');
     dataBt = JSON.parse (dataBt);
     items.push (dataBt.id);
+  }
+  return items;
+};
+
+/**
+ * @return Array [Profile]
+ */
+const getFriends = function () {
+  const profileElements = document.querySelectorAll('._698');
+  const items = [];
+  for (let profileEl of profileElements) {
+    profileEl = profileEl.querySelectorAll('a')[1];
+    let name = profileEl.innerText;
+    let dataHoverCard = profileEl.getAttribute('data-hovercard');
+    let id = dataHoverCard.substring(dataHoverCard.indexOf('id=')+3, dataHoverCard.indexOf('&'));
+    items.push ({
+      id ,
+      name
+    });
   }
   return items;
 };
@@ -67,8 +88,10 @@ const infiniteScrollBottom = async (function* (page, getItemFn, targetCount = 50
     items = yield page.evaluate(getItemFn);
     if (lastItemCount === items.length) { break; }
     lastItemCount = items.length;
-    previousHeight = yield page.evaluate('document.body.scrollHeight');
-    yield page.evaluate('window.scrollTo(0, document.body.scrollHeight)');
+    // previousHeight = yield page.evaluate('document.body.scrollHeight');
+    previousHeight = yield page.evaluate('window.scrollY');
+    yield page.evaluate ('window.scrollTo(0, document.body.scrollHeight)');
+    yield page.waitForFunction (`window.scrollY > ${previousHeight}`);
     yield page.waitFor(scrollDelay);
   }
   return items;
@@ -132,7 +155,23 @@ const searchPeople = async (function* (name, peopleCount = 50) {
   return profiles;
 });
 
+/*
+ * @param { first: String, second: String } target
+ * @return Array [profile]
+ */
+const searchMutualFriends = async (function* (target) {
+  const { first, second } = target;
+  let profiles = [];
+
+  yield page.goto(`${fbUrl.skFriends}${first}${skFriendSuffix}`);
+
+  profiles = yield infiniteScrollBottom(page, getFriends, Infinity, 500);
+
+  return profiles;
+})
+
 module.exports = {
   createService,
-  searchPeople
+  searchPeople,
+  searchMutualFriends
 };

@@ -171,18 +171,41 @@ const searchPeople = async (function* (name, peopleCount = 50) {
  */
 const searchMutualFriends = async (function* (target) {
   const { first, second } = target;
-  let profiles = [];
+  let profilesFirst = [];
+  let profilesSecond = [];
 
-  yield page.goto(`${fbUrl.skFriends}${first}${skFriendSuffix}`);
+  let _idsFirst = [];
+  let _idsSecond = [];
+
+  let mutualFriends = [];
+
 
   try {
-    profiles = yield infiniteScrollBottom(page, getFriends, Infinity, 800);
-    console.log (profiles);
+    yield page.goto(`${fbUrl.skFriends}${first}${skFriendSuffix}`);
+    profilesFirst = yield infiniteScrollBottom(page, getFriends, Infinity, 800);
+    yield page.goto(`${fbUrl.skFriends}${second}${skFriendSuffix}`);
+    profilesSecond = yield infiniteScrollBottom(page, getFriends, Infinity, 800);
   } catch (e) {
     console.log (`oops Error happened ${e}`);
   }
 
-  return profiles;
+  if (_.isArray(profilesFirst) && _.isArray(profilesSecond)) {
+    _idsFirst = profilesFirst.map( profile => profile.id );
+    _idsSecond = profilesSecond.map( profile => profile.id );
+  }
+  if (_idsFirst.length < _idsSecond.length) {
+    for (let id of _idsFirst) {
+      const index = _idsSecond.findIndex ( (value, index, arr) => id === value);
+      if (~index) { mutualFriends.push (profilesSecond[index]) }
+    }
+  } else {
+    for (let id of _idsSecond) {
+      const index = _idsFirst.findIndex ( (value, index, arr) => id === value);
+      if (~index) { mutualFriends.push (profilesFirst[index]) }
+    }
+  }
+
+  return mutualFriends;
 })
 
 module.exports = {

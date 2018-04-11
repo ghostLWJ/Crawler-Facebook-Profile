@@ -100,7 +100,6 @@ const getPeopleProfile = async (function* (id) {
 
   for (let i of _ids) {
     yield page.goto(`${fbUrl.peopleProfile}${String(i)}`);
-    yield page.waitForNavigation();
     profiles.push (yield page.evaluate(parseProfile));
   }
 

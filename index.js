@@ -46,7 +46,6 @@ const parseProfile = function () {
   if (name.includes (alternateNameTagName)) {
     name = name.substring(0, name.indexOf(alternateNameTagName) - 1);
   }
-  console.log (name);
 
   profile.name = name;
   return profile;
@@ -100,7 +99,12 @@ const getPeopleProfile = async (function* (id) {
 
   for (let i of _ids) {
     yield page.goto(`${fbUrl.peopleProfile}${String(i)}`);
-    profiles.push (yield page.evaluate(parseProfile));
+    let profile = yield page.evaluate(parseProfile);
+
+    profiles.push ({
+      id: i,
+      name: profile.name
+    });
   }
 
   return profiles;

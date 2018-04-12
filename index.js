@@ -5,16 +5,23 @@ const _ = require ('lodash');
 const config = require ('./config');
 
 let page = null;
+let page2 = null;
 let browser = null;
 
 let headless = false;
+let controlPopUp = headless;
 let slowMo = 0;
 
 const createService = async (function* () {
   browser = yield puppeteer.launch ({ headless, slowMo });
   page = yield browser.newPage ();
+  page2 = yield browser.newPage ();
   yield login();
 });
+
+const closeService = async (function* () {
+  browser.close()
+})
 
 const fbUrl = {
   index: 'https://www.facebook.com/',
@@ -96,7 +103,7 @@ const infiniteScrollBottom = async (function* (page, getItemFn, targetCount = 50
   const waitForCancelPermission = 5000;
   try {
     while (items.length < targetCount) {
-      if (!headless) { yield page.waitFor (waitForCancelPermission); headless = true; } // for headless false debug, permission popup cancel manually.
+      if (!controlPopUp) { yield page.waitFor (waitForCancelPermission); controlPopUp = true; } // for headless false debug, permission popup cancel manually.
       items = yield page.evaluate(getItemFn);
       if (lastItemCount === items.length) {
         if (!tryCount--) { break; }
@@ -191,9 +198,12 @@ const searchMutualFriends = async (function* (target) {
 
   try {
     yield page.goto(`${fbUrl.skFriends}${first}${skFriendSuffix}`);
-    profilesFirst = yield infiniteScrollBottom(page, getFriends, Infinity, 800);
-    yield page.goto(`${fbUrl.skFriends}${second}${skFriendSuffix}`);
-    profilesSecond = yield infiniteScrollBottom(page, getFriends, Infinity, 800);
+    yield page2.goto(`${fbUrl.skFriends}${second}${skFriendSuffix}`);
+    profilesFirst = infiniteScrollBottom(page, getFriends, Infinity, 800);
+    profilesSecond = infiniteScrollBottom(page2, getFriends, Infinity, 800);
+    const profilesAll = yield Promise.all ([profilesFirst, profilesSecond]);
+    profilesFirst = profilesAll[0];
+    profilesSecond = profilesAll[1];
   } catch (e) {
     console.log (`oops Error happened ${e}`);
   }
@@ -227,5 +237,6 @@ const searchMutualFriends = async (function* (target) {
 module.exports = {
   createService,
   searchPeople,
-  searchMutualFriends
+  searchMutualFriends,
+  closeService
 };

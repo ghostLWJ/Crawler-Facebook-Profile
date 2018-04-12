@@ -20,7 +20,9 @@
   },
   "homepage": "https://github.com/ghostLWJ/Crawler-Facebook-Profile#readme",
   "dependencies": {
+    "body-parser": "^1.18.2",
     "co": "^4.6.0",
+    "express": "^4.16.3",
     "lodash": "^4.17.5",
     "mysql2": "^1.5.3",
     "puppeteer": "^1.2.0",

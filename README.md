@@ -15,7 +15,7 @@ cd Crawler-Facebook-Profile/
 npm install
 ```
 
-Note: If you are using docker, when npm install please remeber add --no-bin-links.
+Note: If you are using docker, when npm install please remember add --no-bin-links.
 
 ```bash
 npm install --no-bin-links
@@ -40,7 +40,7 @@ module.exports = {
 
 ### Usage
 
-Follow Example file test.js
+Follow example file test.js
 
 ```javascript
 const { wrap: async } = require ('co');

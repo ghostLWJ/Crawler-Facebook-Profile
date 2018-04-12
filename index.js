@@ -3,12 +3,13 @@ const { wrap: async } = require ('co');
 const _ = require ('lodash');
 
 const config = require ('./config');
+const FBFriend  = require ('./fb-friend');
 
 let page = null;
 let page2 = null;
 let browser = null;
 
-let headless = false;
+let headless = true;
 let controlPopUp = headless;
 let slowMo = 0;
 
@@ -195,6 +196,8 @@ const searchMutualFriends = async (function* (target) {
 
   let mutualFriends = [];
 
+  // compare param
+  if (first === second) { return mutualFriends };
 
   try {
     yield page.goto(`${fbUrl.skFriends}${first}${skFriendSuffix}`);
@@ -209,7 +212,10 @@ const searchMutualFriends = async (function* (target) {
   }
 
   // Type check
-  if ( !_.isArray(profilesFirst) && !_.isArray(profilesSecond) && !profilesFirst.length && !profilesSecond.length ) {
+  if ( !_.isArray(profilesFirst) &&
+      !_.isArray(profilesSecond) &&
+      !profilesFirst.length &&
+      !profilesSecond.length ) {
     return mutualFriends;
   }
 
@@ -228,8 +234,21 @@ const searchMutualFriends = async (function* (target) {
     }
   }
 
+  FBFriend.add (first, arrayToString (profilesFirst)); // async
+  FBFriend.add (first, arrayToString (profilesSecond)); // async
+
   return mutualFriends;
-})
+});
+
+/*
+ * @param Array arr
+ * @return Array
+ */
+const arrayToString = function (arr) {
+  let _arr = [];
+  for (let item of arr) { _arr.push ( JSON.stringify (item) ); }
+  return _arr.join();
+}
 
 module.exports = {
   createService,

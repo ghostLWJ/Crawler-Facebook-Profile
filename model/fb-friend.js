@@ -2,16 +2,16 @@ const Sequelize = require('sequelize');
 
 const sequelize = require ('../db');
 
-const FBUser = sequelize.define ('fb_user', {
+const FBFriend = sequelize.define ('fb_friend', {
   id: {
     type: Sequelize.STRING,
     primaryKey: true
   },
-  name: {
-    type: Sequelize.STRING
+  friends: {
+    type: Sequelize.TEXT
   }
 });
 
 sequelize.sync();
 
-module.exports = FBUser;
+module.exports = FBFriend;

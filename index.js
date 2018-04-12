@@ -209,15 +209,12 @@ const searchMutualFriends = async (function* (target) {
   }
 
   // Type check
-  if ( !_.isArray(profilesFirst) ) {}
-  if ( !_.isArray(profilesSecond) ) {}
-  if ( !profilesFirst.length ) {}
-  if ( !profilesSecond.length ) {}
-
-  if (_.isArray(profilesFirst) && _.isArray(profilesSecond)) {
-    _idsFirst = profilesFirst.map( profile => profile.id );
-    _idsSecond = profilesSecond.map( profile => profile.id );
+  if ( !_.isArray(profilesFirst) && !_.isArray(profilesSecond) && !profilesFirst.length && !profilesSecond.length ) {
+    return mutualFriends;
   }
+
+  _idsFirst = profilesFirst.map( profile => profile.id );
+  _idsSecond = profilesSecond.map( profile => profile.id );
 
   if (_idsFirst.length < _idsSecond.length) {
     for (let id of _idsFirst) {

@@ -188,16 +188,31 @@ const searchPeople = async (function* (name, peopleCount = 50) {
  */
 const searchMutualFriends = async (function* (target) {
   const { first, second } = target;
+  let prefetch = false;
   let profilesFirst = [];
   let profilesSecond = [];
-
-  let _idsFirst = [];
-  let _idsSecond = [];
 
   let mutualFriends = [];
 
   // compare param
-  if (first === second) { return mutualFriends };
+  if (first === second) { return mutualFriends }; // res something
+
+  // __ variable is not important, just a temp variable
+  let __ = yield FBFriend.findOne (first);
+  if (__) {
+    __ = __.friends.split('||');
+    for (let item of __ ) { profilesFirst.push (JSON.parse(item)); }
+  }
+
+  __ = yield FBFriend.findOne (second);
+  if (__) {
+    __ = __.friends.split('||');
+    for (let item of __ ) { profilesSecond.push (JSON.parse(item)); }
+  }
+
+  if ( profilesFirst.length && profilesSecond.length ) { prefetch = true; }
+
+  if (prefetch) { mutualFriends = findMutualFriends(profilesFirst, profilesSecond); } // res something
 
   try {
     yield page.goto(`${fbUrl.skFriends}${first}${skFriendSuffix}`);
@@ -219,6 +234,27 @@ const searchMutualFriends = async (function* (target) {
     return mutualFriends;
   }
 
+  if (prefetch) { mutualFriends = findMutualFriends(profilesFirst, profilesSecond); } // res something
+
+  // Can async
+  yield Promise.all ([
+    FBFriend.upsert (first, arrayToString (profilesFirst)),
+    FBFriend.upsert (second, arrayToString (profilesSecond))
+  ]);
+
+  return mutualFriends; // res something
+});
+
+/*
+ * @param Array  profilesFirst
+ * @param Array  profilesSecond
+ * @return Array
+ */
+const findMutualFriends = function (profilesFirst, profilesSecond) {
+  const mutualFriends = [];
+  let _idsFirst = [];
+  let _idsSecond = [];
+
   _idsFirst = profilesFirst.map( profile => profile.id );
   _idsSecond = profilesSecond.map( profile => profile.id );
 
@@ -234,11 +270,8 @@ const searchMutualFriends = async (function* (target) {
     }
   }
 
-  FBFriend.add (first, arrayToString (profilesFirst)); // async
-  FBFriend.add (first, arrayToString (profilesSecond)); // async
-
   return mutualFriends;
-});
+}
 
 /*
  * @param Array arr
@@ -247,7 +280,7 @@ const searchMutualFriends = async (function* (target) {
 const arrayToString = function (arr) {
   let _arr = [];
   for (let item of arr) { _arr.push ( JSON.stringify (item) ); }
-  return _arr.join();
+  return _arr.join('||');
 }
 
 module.exports = {

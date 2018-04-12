@@ -5,6 +5,7 @@
 ### Environment
 
 NodeJS version: v6.13.0
+
 npm vsrsion: 3.10.10
 
 ### Installation
@@ -68,3 +69,46 @@ fbApis.createService ().then ( async (function* () {
 Also you can use puppeteer headless to debug.
 
 Edit index.js line 8 to false
+
+Start Server
+
+```bash
+node server.js
+```
+
+**API**
+
+You can use POSTMAN, curl, or others to test.
+
+**search mutual friends**
+
+POST to http://127.0.0.1:3000
+
+POST example
+
+```javascript
+{
+  "ids": {
+    "first": "<FB user id>",
+    "second": "<FB user id>"
+  }
+}
+```
+
+Response example
+
+```javascript
+[
+  {
+    "id": "FB mutual friend id",
+    "name": "FB mutual friend name"
+  },
+  {
+    "id": "FB mutual friend id",
+    "name": "FB mutual friend name"
+  }
+]
+
+// If not found
+[]
+```

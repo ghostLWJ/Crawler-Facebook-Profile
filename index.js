@@ -7,7 +7,7 @@ const config = require ('./config');
 let page = null;
 let browser = null;
 
-let headless = true;
+let headless = false;
 let slowMo = 0;
 
 const createService = async (function* () {
@@ -45,9 +45,17 @@ const getFriends = function () {
   const profileElements = document.querySelectorAll('._698');
   const items = [];
   for (let profileEl of profileElements) {
+    let _profileEl = profileEl;
     profileEl = profileEl.querySelectorAll('a')[1];
     let name = profileEl.innerText;
     let dataHoverCard = profileEl.getAttribute('data-hovercard');
+
+    if (!dataHoverCard) {
+      profileEl = _profileEl.querySelectorAll('a')[2];
+      name = profileEl.innerText;
+      dataHoverCard = profileEl.getAttribute('data-hovercard');
+    }
+
     let id = dataHoverCard.substring(dataHoverCard.indexOf('id=')+3, dataHoverCard.indexOf('&'));
     items.push ({
       id ,
@@ -97,12 +105,13 @@ const infiniteScrollBottom = async (function* (page, getItemFn, targetCount = 50
       }
       lastItemCount = items.length;
       previousHeight = yield page.evaluate('window.scrollY');
-      yield page.evaluate ('window.scrollTo(0, document.body.scrollHeight)');
+      yield page.evaluate ('window.scrollTo(0, document.body.scrollHeight)', 0);
       yield page.waitForFunction (`window.scrollY >= ${previousHeight}`, { polling: 100 });
       yield page.waitFor (scrollDelay);
     }
   } catch (e) {
     console.log (`OOOps Error happened ${e}`);
+    return items;
   }
   return items;
 });
@@ -189,10 +198,17 @@ const searchMutualFriends = async (function* (target) {
     console.log (`oops Error happened ${e}`);
   }
 
+  // Type check
+  if ( !_.isArray(profilesFirst) ) {}
+  if ( !_.isArray(profilesSecond) ) {}
+  if ( !profilesFirst.length ) {}
+  if ( !profilesSecond.length ) {}
+
   if (_.isArray(profilesFirst) && _.isArray(profilesSecond)) {
     _idsFirst = profilesFirst.map( profile => profile.id );
     _idsSecond = profilesSecond.map( profile => profile.id );
   }
+
   if (_idsFirst.length < _idsSecond.length) {
     for (let id of _idsFirst) {
       const index = _idsSecond.findIndex ( (value, index, arr) => id === value);

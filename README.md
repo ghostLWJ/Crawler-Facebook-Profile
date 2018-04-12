@@ -80,6 +80,8 @@ node server.js
 
 You can use POSTMAN, curl, or others to test.
 
+Note: If browser popup permission hint, please cancel it, or when crawler scroll down will stuck.
+
 **search mutual friends**
 
 POST to http://127.0.0.1:3000

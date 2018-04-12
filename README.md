@@ -70,7 +70,7 @@ Also you can use puppeteer headless to debug.
 
 Edit index.js line 8 to false
 
-Start Server
+**Start Server**
 
 ```bash
 node server.js

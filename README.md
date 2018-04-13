@@ -39,6 +39,12 @@ module.exports = {
 };
 ```
 
+And
+
+```bash
+node test.js
+```
+
 ### Usage
 
 Follow example file test.js
@@ -64,12 +70,6 @@ fbApis.createService ().then ( async (function* () {
   fbApis.closeService ();
   sequelize.close ();
 }));
-```
-
-And
-
-```bash
-node test.js
 ```
 
 Also you can use puppeteer headless to debug.

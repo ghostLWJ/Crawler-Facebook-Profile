@@ -16,7 +16,7 @@ app.listen(PORT, function () {
     console.log(`App listening on port ${PORT}!`)
 });
 
-app.post('/', async (function* (req, res) {
+app.post ('/', async (function* (req, res, next) {
 	// console.log (JSON.stringify (req.body, null, 2));
 	const ids = req.body.ids || {};
   const first = _.get(ids, 'first');
@@ -31,8 +31,16 @@ app.post('/', async (function* (req, res) {
   const target = { first, second }
 
   yield fbApis.createService ()
-  mutualFriends = yield fbApis.searchMutualFriends (target);
+  mutualFriends = yield fbApis.searchMutualFriends (target, next);
   fbApis.closeService ();
 
-	res.json (mutualFriends);
+	// res.json (mutualFriends);
+  res.locals.mutualFriends = mutualFriends;
+  next ();
+}));
+
+app.post ('/', async (function* (req, res) {
+  console.log ( JSON.stringify (res.locals, null, 2) );
+  res.json (res.locals.mutualFriends);
+  res.end ();
 }));

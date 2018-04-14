@@ -9,11 +9,12 @@ let page = null;
 let page2 = null;
 let browser = null;
 
-let headless = true;
+let headless = false;
 let controlPopUp = headless;
 let slowMo = 0;
 
 const createService = async (function* () {
+  if (browser && page && page2) { return; }
   browser = yield puppeteer.launch ({ headless, slowMo });
   page = yield browser.newPage ();
   page2 = yield browser.newPage ();
@@ -184,76 +185,60 @@ const searchPeople = async (function* (name, peopleCount = 50) {
 
 /*
  * @param { first: String, second: String } target
+ * @param Function cb
  * @return Array [profile]
  */
 const searchMutualFriends = async (function* (target) {
-  const { first, second } = target;
-  let prefetch = false;
-  let profilesAll = [];
-  let profilesFirst = [];
-  let profilesSecond = [];
+  return new Promise ( async (function* (resolve, reject) {
+    const { first, second } = target;
+    let prefetch = false;
+    let profilesFirst = [];
+    let profilesSecond = [];
+    let mutualFriends = [];
 
-  let mutualFriends = [];
+    // compare param
+    if (first === second) { return mutualFriends }; // res something
 
-  // compare param
-  if (first === second) { return mutualFriends }; // res something
+    // __ variable is not important, just a temp variable
+    let __ = yield FBFriend.findOne (first);
+    if (__) {
+      __ = __.friends.split('||');
+      for (let item of __ ) { profilesFirst.push (JSON.parse(item)); }
+    }
 
-  // __ variable is not important, just a temp variable
-  let __ = yield FBFriend.findOne (first);
-  if (__) {
-    __ = __.friends.split('||');
-    for (let item of __ ) { profilesFirst.push (JSON.parse(item)); }
-  }
+    __ = yield FBFriend.findOne (second);
+    if (__) {
+      __ = __.friends.split('||');
+      for (let item of __ ) { profilesSecond.push (JSON.parse(item)); }
+    }
 
-  __ = yield FBFriend.findOne (second);
-  if (__) {
-    __ = __.friends.split('||');
-    for (let item of __ ) { profilesSecond.push (JSON.parse(item)); }
-  }
+    if ( profilesFirst.length && profilesSecond.length ) { prefetch = true; }
 
-  if ( profilesFirst.length && profilesSecond.length ) { prefetch = true; }
+    if (prefetch) {
+      mutualFriends = findMutualFriends(profilesFirst, profilesSecond);
+      resolve (mutualFriends);
+    }
 
-  if (prefetch) { mutualFriends = findMutualFriends(profilesFirst, profilesSecond); }
+    const mutualFriendsObj  = yield crawlerMutualFriends ( { first, second } );
+    profilesFirst = mutualFriendsObj.first;
+    profilesSecond = mutualFriendsObj.second;
 
-  if (prefetch) {
-    crawlerFriends ( { first, second } );
-  } else {
-    profilesAll = yield crawlerFriends ( { first, second } );
-    profilesFirst = profilesAll[0];
-    profilesSecond = profilesAll[1];
-    mutualFriends = findMutualFriends(profilesFirst, profilesSecond);
-    Promise.all ([
-      FBFriend.upsert (first, arrayToString (profilesFirst)),
-      FBFriend.upsert (second, arrayToString (profilesSecond))
-    ]);
-  }
+    if (!prefetch) {
+      mutualFriends = findMutualFriends(profilesFirst, profilesSecond);
+      resolve (mutualFriends)
+    }
 
-  /*
-  try {
-    yield page.goto(`${fbUrl.skFriends}${first}${skFriendSuffix}`);
-    yield page2.goto(`${fbUrl.skFriends}${second}${skFriendSuffix}`);
-    profilesFirst = infiniteScrollBottom(page, getFriends, Infinity, 800);
-    profilesSecond = infiniteScrollBottom(page2, getFriends, Infinity, 800);
-    const profilesAll = yield Promise.all ([profilesFirst, profilesSecond]);
-    profilesFirst = profilesAll[0];
-    profilesSecond = profilesAll[1];
-  } catch (e) {
-    console.log (`oops Error happened ${e}`);
-  }
-  */
+    // Type check
+    if ( !_.isArray(profilesFirst) ||
+        !_.isArray(profilesSecond) ||
+        !profilesFirst.length ||
+        !profilesSecond.length ) {
+      console.log (`upsertUserFriends failed`);
+      return resolve(mutualFriends);
+    }
 
-  /*
-   * Type check
-   */
-  if ( !prefetch &&
-      !_.isArray(profilesFirst) &&
-      !_.isArray(profilesSecond) &&
-      !profilesFirst.length &&
-      !profilesSecond.length ) {
-    return mutualFriends;
-  }
-
-  return mutualFriends;
+    upsertUserFriends(first, profilesFirst, second, profilesSecond);
+  }));
 });
 
 /*
@@ -285,26 +270,29 @@ const findMutualFriends = function (profilesFirst, profilesSecond) {
 }
 
 /*
- * @param {first: String, second: String} ids
- * @return Array [profile]
+ * @param { first: String, second: String }
+ * @return { first: Array [profile] , second: Array [profile] }
  */
-const crawlerFriends = async (function* () {
-  let profilesAll = [];
-
+const crawlerMutualFriends = async (function* ( { first, second } ) {
   try {
     yield page.goto(`${fbUrl.skFriends}${first}${skFriendSuffix}`);
     yield page2.goto(`${fbUrl.skFriends}${second}${skFriendSuffix}`);
-    profilesFirst = infiniteScrollBottom(page, getFriends, Infinity, 800);
-    profilesSecond = infiniteScrollBottom(page2, getFriends, Infinity, 800);
-    profilesAll = yield Promise.all ([profilesFirst, profilesSecond]);
-    profilesFirst = profilesAll[0];
-    profilesSecond = profilesAll[1];
+    const profilesAll = yield Promise.all ([
+      infiniteScrollBottom(page, getFriends, Infinity, 800),
+      infiniteScrollBottom(page2, getFriends, Infinity, 800)
+    ]);
+    return { first: profilesAll[0], second: profilesAll[1] };
   } catch (e) {
     console.log (`oops Error happened ${e}`);
-    return profilesAll;
   }
+  return { first: [], second: [] };
+});
 
-  return profilesAll;
+const upsertUserFriends = async (function* (first, profilesFirst, second, profilesSecond) {
+  Promise.all ([
+    FBFriend.upsert (first, arrayToString (profilesFirst)),
+    FBFriend.upsert (second, arrayToString (profilesSecond))
+  ]);
 });
 
 /*

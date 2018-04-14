@@ -31,16 +31,8 @@ app.post ('/', async (function* (req, res, next) {
   const target = { first, second }
 
   yield fbApis.createService ()
-  mutualFriends = yield fbApis.searchMutualFriends (target, next);
-  fbApis.closeService ();
+  mutualFriends = yield fbApis.searchMutualFriends (target);
 
-	// res.json (mutualFriends);
-  res.locals.mutualFriends = mutualFriends;
-  next ();
-}));
-
-app.post ('/', async (function* (req, res) {
-  console.log ( JSON.stringify (res.locals, null, 2) );
-  res.json (res.locals.mutualFriends);
-  res.end ();
+  res.json (mutualFriends);
+  // fbApis.closeService ();
 }));

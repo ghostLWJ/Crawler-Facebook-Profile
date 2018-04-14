@@ -9,11 +9,12 @@ let page = null;
 let page2 = null;
 let browser = null;
 
-let headless = true;
+let headless = false;
 let controlPopUp = headless;
 let slowMo = 0;
 
 const createService = async (function* () {
+  if (browser && page && page2) { return; }
   browser = yield puppeteer.launch ({ headless, slowMo });
   page = yield browser.newPage ();
   page2 = yield browser.newPage ();
@@ -187,55 +188,57 @@ const searchPeople = async (function* (name, peopleCount = 50) {
  * @param Function cb
  * @return Array [profile]
  */
-const searchMutualFriends = async (function* (target, cb) {
-  const { first, second } = target;
-  let prefetch = false;
-  let profilesFirst = [];
-  let profilesSecond = [];
-  let mutualFriends = [];
+const searchMutualFriends = async (function* (target) {
+  return new Promise ( async (function* (resolve, reject) {
+    const { first, second } = target;
+    let prefetch = false;
+    let profilesFirst = [];
+    let profilesSecond = [];
+    let mutualFriends = [];
 
-  // compare param
-  if (first === second) { return mutualFriends }; // res something
+    // compare param
+    if (first === second) { return mutualFriends }; // res something
 
-  // __ variable is not important, just a temp variable
-  let __ = yield FBFriend.findOne (first);
-  if (__) {
-    __ = __.friends.split('||');
-    for (let item of __ ) { profilesFirst.push (JSON.parse(item)); }
-  }
+    // __ variable is not important, just a temp variable
+    let __ = yield FBFriend.findOne (first);
+    if (__) {
+      __ = __.friends.split('||');
+      for (let item of __ ) { profilesFirst.push (JSON.parse(item)); }
+    }
 
-  __ = yield FBFriend.findOne (second);
-  if (__) {
-    __ = __.friends.split('||');
-    for (let item of __ ) { profilesSecond.push (JSON.parse(item)); }
-  }
+    __ = yield FBFriend.findOne (second);
+    if (__) {
+      __ = __.friends.split('||');
+      for (let item of __ ) { profilesSecond.push (JSON.parse(item)); }
+    }
 
-  if ( profilesFirst.length && profilesSecond.length ) { prefetch = true; }
+    if ( profilesFirst.length && profilesSecond.length ) { prefetch = true; }
 
-  if (prefetch) {
-    mutualFriends = findMutualFriends(profilesFirst, profilesSecond);
-    cb (mutualFriends);
-  }
+    if (prefetch) {
+      mutualFriends = findMutualFriends(profilesFirst, profilesSecond);
+      resolve (mutualFriends);
+    }
 
-  const mutualFriendsObj  = yield crawlerMutualFriends ( { first, second } );
-  profilesFirst = mutualFriendsObj.first;
-  profilesSecond = mutualFriendsObj.second;
+    const mutualFriendsObj  = yield crawlerMutualFriends ( { first, second } );
+    profilesFirst = mutualFriendsObj.first;
+    profilesSecond = mutualFriendsObj.second;
 
-  if (!prefetch) {
-    mutualFriends = findMutualFriends(profilesFirst, profilesSecond);
-    cb (mutualFriends)
-  }
+    if (!prefetch) {
+      mutualFriends = findMutualFriends(profilesFirst, profilesSecond);
+      resolve (mutualFriends)
+    }
 
-  // Type check
-  if ( !_.isArray(profilesFirst) ||
-      !_.isArray(profilesSecond) ||
-      !profilesFirst.length ||
-      !profilesSecond.length ) {
-    console.log (`upsertUserFriends failed`);
-    return;
-  }
+    // Type check
+    if ( !_.isArray(profilesFirst) ||
+        !_.isArray(profilesSecond) ||
+        !profilesFirst.length ||
+        !profilesSecond.length ) {
+      console.log (`upsertUserFriends failed`);
+      return resolve(mutualFriends);
+    }
 
-  upsertUserFriends(first, profilesFirst, second, profilesSecond);
+    upsertUserFriends(first, profilesFirst, second, profilesSecond);
+  }));
 });
 
 /*

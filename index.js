@@ -184,14 +184,14 @@ const searchPeople = async (function* (name, peopleCount = 50) {
 
 /*
  * @param { first: String, second: String } target
+ * @param Function cb
  * @return Array [profile]
  */
-const searchMutualFriends = async (function* (target) {
+const searchMutualFriends = async (function* (target, cb) {
   const { first, second } = target;
   let prefetch = false;
   let profilesFirst = [];
   let profilesSecond = [];
-
   let mutualFriends = [];
 
   // compare param
@@ -212,25 +212,30 @@ const searchMutualFriends = async (function* (target) {
 
   if ( profilesFirst.length && profilesSecond.length ) { prefetch = true; }
 
-  if (prefetch) { mutualFriends = findMutualFriends(profilesFirst, profilesSecond); } // res something
-
-  // Type check
-  if ( !_.isArray(profilesFirst) &&
-      !_.isArray(profilesSecond) &&
-      !profilesFirst.length &&
-      !profilesSecond.length ) {
-    return mutualFriends;
+  if (prefetch) {
+    mutualFriends = findMutualFriends(profilesFirst, profilesSecond);
+    cb (mutualFriends);
   }
 
-  if (prefetch) { mutualFriends = findMutualFriends(profilesFirst, profilesSecond); } // res something
+  const mutualFriendsObj  = yield crawlerMutualFriends ( { first, second } );
+  profilesFirst = mutualFriendsObj.first;
+  profilesSecond = mutualFriendsObj.second;
 
-  // Can async
-  yield Promise.all ([
-    FBFriend.upsert (first, arrayToString (profilesFirst)),
-    FBFriend.upsert (second, arrayToString (profilesSecond))
-  ]);
+  if (!prefetch) {
+    mutualFriends = findMutualFriends(profilesFirst, profilesSecond);
+    cb (mutualFriends)
+  }
 
-  return mutualFriends; // res something
+  // Type check
+  if ( !_.isArray(profilesFirst) ||
+      !_.isArray(profilesSecond) ||
+      !profilesFirst.length ||
+      !profilesSecond.length ) {
+    console.log (`upsertUserFriends failed`);
+    return;
+  }
+
+  upsertUserFriends(first, profilesFirst, second, profilesSecond);
 });
 
 /*
@@ -263,19 +268,28 @@ const findMutualFriends = function (profilesFirst, profilesSecond) {
 
 /*
  * @param { first: String, second: String }
- * @return Array [profile]
+ * @return { first: Array [profile] , second: Array [profile] }
  */
 const crawlerMutualFriends = async (function* ( { first, second } ) {
   try {
     yield page.goto(`${fbUrl.skFriends}${first}${skFriendSuffix}`);
     yield page2.goto(`${fbUrl.skFriends}${second}${skFriendSuffix}`);
-    return yield Promise.all ([
+    const profilesAll = yield Promise.all ([
       infiniteScrollBottom(page, getFriends, Infinity, 800),
       infiniteScrollBottom(page2, getFriends, Infinity, 800)
     ]);
+    return { first: profilesAll[0], second: profilesAll[1] };
   } catch (e) {
     console.log (`oops Error happened ${e}`);
   }
+  return { first: [], second: [] };
+});
+
+const upsertUserFriends = async (function* (first, profilesFirst, second, profilesSecond) {
+  Promise.all ([
+    FBFriend.upsert (first, arrayToString (profilesFirst)),
+    FBFriend.upsert (second, arrayToString (profilesSecond))
+  ]);
 });
 
 /*

@@ -6,7 +6,7 @@
 
 NodeJS version: v6.13.0
 
-npm vsrsion: 3.10.10
+npm version: 3.10.10
 
 ### Installation
 
